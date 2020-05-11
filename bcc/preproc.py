@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Set
 from pathlib import Path
 
-from . import Output, File
+from . import File
 
 __all__ = []
 
