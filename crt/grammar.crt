@@ -1,0 +1,26 @@
+start
+    : external_declaration
+    | start external_declaration
+    ;
+
+external_declaration
+    : function_definition
+    | declaration
+    ;
+
+function_definition
+    : declarator
+    ;
+
+declarator
+    : pointer direct_declarator
+    | direct_declarator
+    ;
+
+direct_declarator
+    : IDENTIFIER
+    ;
+
+pointer
+    : '*'
+    ;
