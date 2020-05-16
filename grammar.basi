@@ -1,0 +1,23 @@
+#enum Target {
+    start,
+}
+
+{start} LET T% = {Target.start}
+LET LINE$ = "abc"
+LET S% = LEN(LINE$)
+
+{step} IF S% = I% THEN GOTO {done}
+LET C$ = MID$(LINE$, I$, 1)
+
+#branch T% {
+    {Target.start} => {_match_rule_start}
+}
+
+I = I + 1
+GOTO {step}
+
+{_match_rule_start} REM 'start'
+{_match_rule_start_A} REM A
+{_match_rule_start_A_B} REM B
+{_match_rule_start_A_B_C} REM C
+{done} END

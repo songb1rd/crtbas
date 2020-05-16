@@ -6,9 +6,6 @@ REM ----------------------------------------
 REM
 REM ~ Courtesy of Songer :D
 
-REM ~ Constants
-#define CODE_LIMIT 4096
-
 REM :func:`crt.main`
 REM
 REM <inline comment> `arg$` is assumed to be the target filepath.

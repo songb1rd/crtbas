@@ -1,6 +1,9 @@
 REM CRT VirtualMachine
 REM ==================
 
+REM ~ Constants
+#define CODE_LIMIT 4096
+
 #enum Opcode {
     Nop = 0,
     Exit,
@@ -32,4 +35,4 @@ REM Run the virtual machine until completion.
 
     {_crt_vm_main_loop_next} IP = IP + 1
     IF IP% < {CODE_LIMIT} THEN GOTO {_crt_vm_main_loop_head}
-    GOTO {end}
+    {end} END
