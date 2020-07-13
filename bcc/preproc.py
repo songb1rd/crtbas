@@ -25,7 +25,7 @@ class Context:
     source: File = field(init=True, repr=False)
     labels: Dict[str, str] = field(default_factory=dict)
     included: List["File"] = field(default_factory=list)
-    mapped: defaultdict = field(default_factory=(lambda: defaultdict(list)))
+    mapped: Dict[int, Tuple[str, List[str]]] = field(default_factory=dict)
 
     def process_include(self, line: int, include_path: str):
         path = self.source.path.parent.joinpath(include_path)
@@ -118,7 +118,7 @@ class Context:
         subject = subject.strip()
 
         self.source.mapping[line] = f"#switch {subject} {{"
-        self.mapped["switch"].append((line, args))
+        self.mapped[line].append(("switch", args))
 
         sequence = sorted(list(self.source.mapping.keys()))
         for key in sequence[line + 1:]:
@@ -137,6 +137,71 @@ class Context:
             self.source.mapping[key] = f"{target} => GOTO {branch}"
         else:
             raise RuntimeError("Ran out of runway.")
+
+    def process_ifdef(self, line: int, *args):
+        target, = args
+
+        blocks = [(target, line)]
+
+        start = line
+        end = None
+        else_found = False
+
+        sequence = sorted(list(self.source.mapping))
+        for key in sequence[line + 1:]:
+            source = self.source.mapping[key].strip()
+
+            if source == "#endif":
+                self.mapped.pop(key)
+
+                end = key + 1
+                break
+
+            if source == "#else":
+                self.mapped.pop(key)
+
+                if else_found:
+                    raise RuntimeError("Duplicate #else ...")
+
+                blocks.append((None, key))
+                continue
+
+            if source == "#elif":
+                self.mapped.pop(key)
+
+                _, target, = shlex.split(trimmed[1:])
+                blocks.append((target, key))
+                continue
+
+        else:
+            raise RuntimeError("Missing #endif ?")
+
+        for idx, (target, block_start) in enumerate(blocks):
+            if target is None:
+                keep = (block_start + 1, end - 1)
+                break
+
+            elif target in self.labels:
+                _, block_end, = blocks[idx + 1]
+                keep = (block_start + 1, block_end)
+                break
+        else:
+            keep = None
+
+        block_span = range(*keep)
+
+        ifdef_span = set(range(start, end)).difference(block_span)
+
+        block_source = {}
+
+        for idx in block_span:
+            block_source[idx] = self.source.mapping[idx]
+
+        for idx in ifdef_span:
+            self.source.mapping[idx] = ""
+
+        for idx, line, in block_source.items():
+            self.source.mapping[idx] = line
 
 
 def scan(source: File) -> Dict[int, str]:
@@ -164,28 +229,42 @@ def process(
     undef: bool = True,
     branch: bool = True,
     switch: bool = True,
+    ifdef: bool = True,
 ) -> Context:
     context = Context(source=source)
     scanned = scan(source)
 
     for n, (op, args) in scanned.items():
-        context.mapped[op].append((n, args))
+        context.mapped[n] = (op, args)
 
-    directives: List[Tuple[str, bool, Callable[..., ...]]]
-    directives = [
-        ("include", include, context.process_include),
-        ("enum", enum, context.process_enum),
-        ("define", define, context.process_define),
-        ("undef", undef, context.process_undef),
-        ("branch", branch, context.process_branch),
-        ("switch", switch, context.process_switch),
-    ]
+    directives: Dict[str, Tuple[bool, Callable[..., ...]]]
+    directives = {
+        "ifdef": (ifdef, context.process_ifdef),
+        "include": (include, context.process_include),
+        "enum": (enum, context.process_enum),
+        "define": (define, context.process_define),
+        "undef": (undef, context.process_undef),
+        "branch": (branch, context.process_branch),
+        "switch": (switch, context.process_switch),
+    }
 
-    passes = [(op, func) for (op, flag, func) in directives if flag]
+    passes = [(op, func) for op, (flag, func) in directives.items() if flag]
 
-    for op, handler in passes:
-        for n, args in context.mapped.pop(op, []):
-            args = [n, *args]
-            handler(*args)
+    while context.mapped:
+        in_order = sorted(context.mapped)
+
+        for n in in_order:
+            if (entry := context.mapped.pop(n, None)) is not None:
+                # ifdef modifies the source mapping but context.mapped works off
+                # an old scan result.
+                #
+                # When ifdef removes a line it just sets it to an empty string.
+                # therefore we just check if the source mapping of line `n` is something.
+                if not context.source.mapping.get(n, False):
+                    continue
+
+                op, args = entry
+                _, handler, = directives[op]
+                handler(n, *args)
 
     return context

@@ -11,7 +11,7 @@ REM
 REM <inline comment> `arg$` is assumed to be the target filepath.
     {_crt_start} OPEN "test.c", AS #1
 
-    REM <inline comment> once we've hit EOF that means everything is in the VM
+    REM <inline comment> once we have hit EOF that means everything is in the VM
     {_crt_start_test_file_eof} IF eof(1) = -1 THEN GOTO {_crt_vm_main_loop}
 
     {_crt_start_file_readline} INPUT# 1, LINE$

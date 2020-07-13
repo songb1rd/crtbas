@@ -37,7 +37,7 @@ class File:
 
         self.mapping = {n: value for n, value in self.mapping.items() if check(value)}
 
-    def flatten(self, *, buf = None):
+    def flatten(self, *, buf: List[str] = None):
         output = buf or []
 
         keys = sorted(self.mapping.keys())

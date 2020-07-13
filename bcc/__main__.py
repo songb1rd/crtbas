@@ -37,8 +37,6 @@ def main():
     for context in files:
         label_mapping.update(context.labels)
 
-    from pprint import pprint
-    # pprint(label_mapping)
 
     output_file.remove_comments(recursive=True)
 
@@ -54,8 +52,6 @@ def main():
     # Normalize output
 
     output_file.normalize(label_mapping=label_mapping, cursor=cursor)
-
-    # pprint(label_mapping)
 
     file = output_file.flatten()
 
